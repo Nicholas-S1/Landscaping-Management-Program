@@ -11,6 +11,11 @@ const errorHandler = require('./middleware/errorHandler');
 // Import routes
 const authRoutes = require('./routes/authRoutes');
 const userRoutes = require('./routes/userRoutes');
+const truckRoutes = require('./routes/truckRoutes');
+const routeRoutes = require('./routes/routeRoutes');
+const timeEntryRoutes = require('./routes/timeEntryRoutes');
+const propertyNoteRoutes = require('./routes/propertyNoteRoutes');
+const messageRoutes = require('./routes/messageRoutes');
 
 // Initialize express app
 const app = express();
@@ -49,6 +54,11 @@ app.get('/health', (req, res) => {
 // API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/trucks', truckRoutes);
+app.use('/api/routes', routeRoutes);
+app.use('/api/time-entries', timeEntryRoutes);
+app.use('/api/property-notes', propertyNoteRoutes);
+app.use('/api/messages', messageRoutes);
 
 // 404 handler
 app.use((req, res) => {
