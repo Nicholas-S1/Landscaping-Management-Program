@@ -4,6 +4,8 @@ const router = express.Router();
 
 const {
   getAllUsers,
+  getContacts,
+  getCustomerDirectory,
   getUserById,
   createUser,
   updateUser,
@@ -23,6 +25,7 @@ const createUserValidation = [
   body('firstName').notEmpty().withMessage('First name is required'),
   body('lastName').notEmpty().withMessage('Last name is required'),
   body('role')
+    .optional()
     .isIn(['customer', 'employee', 'manager', 'admin'])
     .withMessage('Invalid role'),
   handleValidationErrors
@@ -33,6 +36,12 @@ router.use(authenticate);
 
 // Get all users (managers and admins only)
 router.get('/', authorize('manager', 'admin'), getAllUsers);
+
+// People the current user may message
+router.get('/contacts', getContacts);
+
+// Customer directory for crews
+router.get('/customers', authorize('employee', 'manager', 'admin'), getCustomerDirectory);
 
 // Get users by role (managers and admins only)
 router.get('/role/:role', authorize('manager', 'admin'), getUsersByRole);

@@ -57,8 +57,8 @@ const RouteCustomer = sequelize.define('RouteCustomer', {
 }, {
   tableName: 'route_customers',
   indexes: [
-    { fields: ['routeId'] },
-    { fields: ['customerId'] },
+    { fields: ['route_id'] },
+    { fields: ['customer_id'] },
     { fields: ['status'] }
   ]
 });

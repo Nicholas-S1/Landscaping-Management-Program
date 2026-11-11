@@ -70,10 +70,10 @@ const Appointment = sequelize.define('Appointment', {
 }, {
   tableName: 'appointments',
   indexes: [
-    { fields: ['customerId'] },
-    { fields: ['appointmentDate'] },
+    { fields: ['customer_id'] },
+    { fields: ['appointment_date'] },
     { fields: ['status'] },
-    { fields: ['assignedToId'] }
+    { fields: ['assigned_to_id'] }
   ]
 });
 

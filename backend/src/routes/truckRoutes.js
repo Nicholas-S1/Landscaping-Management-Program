@@ -13,8 +13,8 @@ const {
 
 const { authenticate, authorize } = require('../middleware/auth');
 
-// All routes require authentication
-router.use(authenticate);
+// Trucks are internal: staff only
+router.use(authenticate, authorize('employee', 'manager', 'admin'));
 
 // Get all trucks (all authenticated users)
 router.get('/', getAllTrucks);

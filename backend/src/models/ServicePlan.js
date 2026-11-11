@@ -60,6 +60,11 @@ const ServicePlan = sequelize.define('ServicePlan', {
     type: DataTypes.DATE,
     allowNull: true
   },
+  nextServiceDate: {
+    type: DataTypes.DATEONLY,
+    allowNull: true,
+    comment: 'Next date a job should be generated for this plan'
+  },
   notes: {
     type: DataTypes.TEXT,
     allowNull: true
@@ -67,10 +72,10 @@ const ServicePlan = sequelize.define('ServicePlan', {
 }, {
   tableName: 'service_plans',
   indexes: [
-    { fields: ['customerId'] },
+    { fields: ['customer_id'] },
     { fields: ['status'] },
-    { fields: ['startDate'] },
-    { fields: ['nextBillingDate'] }
+    { fields: ['start_date'] },
+    { fields: ['next_billing_date'] }
   ]
 });
 

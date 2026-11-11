@@ -50,10 +50,10 @@ const PropertyNote = sequelize.define('PropertyNote', {
 }, {
   tableName: 'property_notes',
   indexes: [
-    { fields: ['customerId'] },
-    { fields: ['authorId'] },
-    { fields: ['noteType'] },
-    { fields: ['createdAt'] }
+    { fields: ['customer_id'] },
+    { fields: ['author_id'] },
+    { fields: ['note_type'] },
+    { fields: ['created_at'] }
   ]
 });
 

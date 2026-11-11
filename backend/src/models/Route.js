@@ -70,9 +70,9 @@ const Route = sequelize.define('Route', {
 }, {
   tableName: 'routes',
   indexes: [
-    { fields: ['scheduledDate'] },
+    { fields: ['scheduled_date'] },
     { fields: ['status'] },
-    { fields: ['truckId'] }
+    { fields: ['truck_id'] }
   ]
 });
 

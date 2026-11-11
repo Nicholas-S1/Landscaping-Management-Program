@@ -1,303 +1,173 @@
-const User = require('../models/User');
 const { Op } = require('sequelize');
+const User = require('../models/User');
+const { wrap, httpError, pick, paginate } = require('../utils/crud');
+
+const SAFE_ATTRIBUTES = { exclude: ['password', 'resetPasswordToken', 'resetPasswordExpire'] };
+const ROLES = ['customer', 'employee', 'manager', 'admin'];
 
 /**
  * @route   GET /api/users
- * @desc    Get all users (with filtering and pagination)
- * @access  Private (Manager, Admin)
+ * @access  Manager, Admin
  */
-const getAllUsers = async (req, res, next) => {
-  try {
-    const { role, search, page = 1, limit = 10, isActive } = req.query;
+const getAllUsers = wrap(async (req, res) => {
+  const { role, search, isActive } = req.query;
+  const { page, limit, offset } = paginate(req.query);
 
-    // Build where clause
-    const where = {};
-
-    if (role) {
-      where.role = role;
-    }
-
-    if (isActive !== undefined) {
-      where.isActive = isActive === 'true';
-    }
-
-    if (search) {
-      where[Op.or] = [
-        { firstName: { [Op.iLike]: `%${search}%` } },
-        { lastName: { [Op.iLike]: `%${search}%` } },
-        { email: { [Op.iLike]: `%${search}%` } }
-      ];
-    }
-
-    // Calculate pagination
-    const offset = (parseInt(page) - 1) * parseInt(limit);
-
-    // Query users
-    const { count, rows: users } = await User.findAndCountAll({
-      where,
-      attributes: { exclude: ['password', 'resetPasswordToken', 'resetPasswordExpire'] },
-      limit: parseInt(limit),
-      offset,
-      order: [['createdAt', 'DESC']]
-    });
-
-    res.status(200).json({
-      success: true,
-      data: {
-        users,
-        pagination: {
-          total: count,
-          page: parseInt(page),
-          limit: parseInt(limit),
-          pages: Math.ceil(count / parseInt(limit))
-        }
-      }
-    });
-  } catch (error) {
-    next(error);
+  const where = {};
+  if (role) where.role = role;
+  if (isActive !== undefined) where.isActive = isActive === 'true';
+  if (search) {
+    where[Op.or] = ['firstName', 'lastName', 'email'].map((field) => ({ [field]: { [Op.iLike]: `%${search}%` } }));
   }
-};
+
+  const { count, rows: users } = await User.findAndCountAll({
+    where,
+    attributes: SAFE_ATTRIBUTES,
+    limit,
+    offset,
+    order: [['lastName', 'ASC'], ['firstName', 'ASC']]
+  });
+
+  res.json({
+    success: true,
+    data: { users, pagination: { total: count, page, limit, pages: Math.ceil(count / limit) } }
+  });
+});
+
+/**
+ * @route   GET /api/users/contacts
+ * @desc    People the current user may message (names and roles only)
+ * @access  Any signed-in user
+ */
+const getContacts = wrap(async (req, res) => {
+  const roles = {
+    customer: ['manager', 'admin'],
+    employee: ['employee', 'manager', 'admin'],
+    manager: ROLES,
+    admin: ROLES
+  }[req.user.role];
+
+  const users = await User.findAll({
+    where: { role: { [Op.in]: roles }, isActive: true, id: { [Op.ne]: req.user.id } },
+    attributes: ['id', 'firstName', 'lastName', 'role'],
+    order: [['lastName', 'ASC'], ['firstName', 'ASC']]
+  });
+  res.json({ success: true, data: { users } });
+});
+
+/**
+ * @route   GET /api/users/customers
+ * @desc    Customer directory for staff (what a crew needs on site, nothing more)
+ * @access  Employee, Manager, Admin
+ */
+const getCustomerDirectory = wrap(async (req, res) => {
+  const users = await User.findAll({
+    where: { role: 'customer', isActive: true },
+    attributes: ['id', 'firstName', 'lastName', 'phone', 'propertyAddress', 'propertyNotes'],
+    order: [['lastName', 'ASC'], ['firstName', 'ASC']]
+  });
+  res.json({ success: true, data: { users } });
+});
 
 /**
  * @route   GET /api/users/:id
- * @desc    Get user by ID
- * @access  Private
+ * @access  The user themselves, Manager, Admin
  */
-const getUserById = async (req, res, next) => {
-  try {
-    const user = await User.findByPk(req.params.id, {
-      attributes: { exclude: ['password', 'resetPasswordToken', 'resetPasswordExpire'] }
-    });
-
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
-      });
-    }
-
-    res.status(200).json({
-      success: true,
-      data: { user }
-    });
-  } catch (error) {
-    next(error);
-  }
-};
+const getUserById = wrap(async (req, res) => {
+  const user = await User.findByPk(req.params.id, { attributes: SAFE_ATTRIBUTES });
+  if (!user) throw httpError(404, 'User not found');
+  res.json({ success: true, data: { user } });
+});
 
 /**
  * @route   POST /api/users
- * @desc    Create new user (Manager/Admin only)
- * @access  Private (Manager, Admin)
+ * @desc    Managers can add customers; hiring staff is reserved for the owner (admin)
+ * @access  Manager, Admin
  */
-const createUser = async (req, res, next) => {
-  try {
-    const {
-      email,
-      password,
-      firstName,
-      lastName,
-      phone,
-      address,
-      role,
-      hourlyRate,
-      propertyAddress
-    } = req.body;
-
-    // Check if user already exists
-    const existingUser = await User.findOne({ where: { email } });
-    if (existingUser) {
-      return res.status(400).json({
-        success: false,
-        message: 'User with this email already exists'
-      });
-    }
-
-    // Only admins can create admin accounts
-    if (role === 'admin' && req.user.role !== 'admin') {
-      return res.status(403).json({
-        success: false,
-        message: 'Only admins can create admin accounts'
-      });
-    }
-
-    // Create user
-    const userData = {
-      email,
-      password,
-      firstName,
-      lastName,
-      phone,
-      address,
-      role: role || 'customer'
-    };
-
-    // Add employee-specific fields
-    if (['employee', 'manager'].includes(role)) {
-      userData.hourlyRate = hourlyRate;
-      userData.hireDate = new Date();
-    }
-
-    // Add customer-specific fields
-    if (role === 'customer') {
-      userData.propertyAddress = propertyAddress;
-    }
-
-    const user = await User.create(userData);
-
-    res.status(201).json({
-      success: true,
-      message: 'User created successfully',
-      data: { user: user.getPublicProfile() }
-    });
-  } catch (error) {
-    next(error);
+const createUser = wrap(async (req, res) => {
+  const role = ROLES.includes(req.body.role) ? req.body.role : 'customer';
+  if (role !== 'customer' && req.user.role !== 'admin') {
+    throw httpError(403, 'Only the owner can add employees, managers or admins');
   }
-};
+  if (await User.findOne({ where: { email: req.body.email } })) {
+    throw httpError(400, 'User with this email already exists');
+  }
+
+  const data = { ...pick(req.body, ['email', 'password', 'firstName', 'lastName', 'phone', 'address']), role };
+  if (role === 'customer') {
+    Object.assign(data, pick(req.body, ['propertyAddress', 'propertyNotes']));
+  } else {
+    Object.assign(data, pick(req.body, ['hourlyRate']), { hireDate: req.body.hireDate || new Date() });
+  }
+
+  const user = await User.create(data);
+  res.status(201).json({ success: true, message: 'User created successfully', data: { user: user.getPublicProfile() } });
+});
 
 /**
  * @route   PUT /api/users/:id
- * @desc    Update user
- * @access  Private (Manager, Admin)
+ * @desc    Managers edit customer and employee details; roles, activation and manager/admin accounts are owner-only
+ * @access  Manager, Admin
  */
-const updateUser = async (req, res, next) => {
-  try {
-    const user = await User.findByPk(req.params.id);
+const updateUser = wrap(async (req, res) => {
+  const user = await User.findByPk(req.params.id);
+  if (!user) throw httpError(404, 'User not found');
 
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
-      });
-    }
+  const isAdmin = req.user.role === 'admin';
+  const { role, isActive } = req.body;
+  const changesRole = role !== undefined && role !== user.role;
+  const changesActive = isActive !== undefined && isActive !== user.isActive;
 
-    const {
-      firstName,
-      lastName,
-      phone,
-      address,
-      role,
-      hourlyRate,
-      isActive,
-      propertyAddress,
-      propertyNotes
-    } = req.body;
-
-    // Only admins can change roles or modify admin accounts
-    if ((role && role !== user.role) || user.role === 'admin') {
-      if (req.user.role !== 'admin') {
-        return res.status(403).json({
-          success: false,
-          message: 'Only admins can change user roles or modify admin accounts'
-        });
-      }
-    }
-
-    const updateData = {};
-
-    if (firstName) updateData.firstName = firstName;
-    if (lastName) updateData.lastName = lastName;
-    if (phone !== undefined) updateData.phone = phone;
-    if (address !== undefined) updateData.address = address;
-    if (role) updateData.role = role;
-    if (isActive !== undefined) updateData.isActive = isActive;
-
-    // Employee-specific updates
-    if (['employee', 'manager'].includes(user.role)) {
-      if (hourlyRate !== undefined) updateData.hourlyRate = hourlyRate;
-    }
-
-    // Customer-specific updates
-    if (user.role === 'customer') {
-      if (propertyAddress !== undefined) updateData.propertyAddress = propertyAddress;
-      if (propertyNotes !== undefined) updateData.propertyNotes = propertyNotes;
-    }
-
-    await user.update(updateData);
-
-    res.status(200).json({
-      success: true,
-      message: 'User updated successfully',
-      data: { user: user.getPublicProfile() }
-    });
-  } catch (error) {
-    next(error);
+  if (!isAdmin && (changesRole || changesActive || ['manager', 'admin'].includes(user.role))) {
+    throw httpError(403, 'Only the owner can change roles, activate or deactivate accounts, or edit managers and admins');
   }
-};
+  if (user.id === req.user.id && (changesRole || changesActive)) {
+    throw httpError(400, 'You cannot change your own role or deactivate your own account');
+  }
+  if (changesRole && !ROLES.includes(role)) throw httpError(400, 'Invalid role');
+
+  const data = pick(req.body, ['firstName', 'lastName', 'phone', 'address']);
+  if (changesRole) data.role = role;
+  if (changesActive) data.isActive = isActive;
+  const effectiveRole = data.role || user.role;
+  if (effectiveRole === 'customer') {
+    Object.assign(data, pick(req.body, ['propertyAddress', 'propertyNotes']));
+  } else {
+    Object.assign(data, pick(req.body, ['hourlyRate', 'hireDate']));
+  }
+  if (isAdmin && req.body.password) data.password = req.body.password;
+
+  await user.update(data);
+  res.json({ success: true, message: 'User updated successfully', data: { user: user.getPublicProfile() } });
+});
 
 /**
  * @route   DELETE /api/users/:id
- * @desc    Delete user (soft delete - set isActive to false)
- * @access  Private (Admin only)
+ * @desc    Deactivate an account (the record and its history are kept)
+ * @access  Admin
  */
-const deleteUser = async (req, res, next) => {
-  try {
-    const user = await User.findByPk(req.params.id);
-
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
-      });
-    }
-
-    // Prevent deleting yourself
-    if (user.id === req.user.id) {
-      return res.status(400).json({
-        success: false,
-        message: 'You cannot delete your own account'
-      });
-    }
-
-    // Soft delete
-    await user.update({ isActive: false });
-
-    res.status(200).json({
-      success: true,
-      message: 'User deactivated successfully'
-    });
-  } catch (error) {
-    next(error);
-  }
-};
+const deleteUser = wrap(async (req, res) => {
+  const user = await User.findByPk(req.params.id);
+  if (!user) throw httpError(404, 'User not found');
+  if (user.id === req.user.id) throw httpError(400, 'You cannot deactivate your own account');
+  await user.update({ isActive: false });
+  res.json({ success: true, message: 'User deactivated successfully' });
+});
 
 /**
  * @route   GET /api/users/role/:role
- * @desc    Get users by role
- * @access  Private (Manager, Admin)
+ * @access  Manager, Admin
  */
-const getUsersByRole = async (req, res, next) => {
-  try {
-    const { role } = req.params;
-    const validRoles = ['customer', 'employee', 'manager', 'admin'];
-
-    if (!validRoles.includes(role)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid role'
-      });
-    }
-
-    const users = await User.findAll({
-      where: { role, isActive: true },
-      attributes: { exclude: ['password', 'resetPasswordToken', 'resetPasswordExpire'] },
-      order: [['lastName', 'ASC'], ['firstName', 'ASC']]
-    });
-
-    res.status(200).json({
-      success: true,
-      data: { users, count: users.length }
-    });
-  } catch (error) {
-    next(error);
-  }
-};
+const getUsersByRole = wrap(async (req, res) => {
+  if (!ROLES.includes(req.params.role)) throw httpError(400, 'Invalid role');
+  const users = await User.findAll({
+    where: { role: req.params.role, isActive: true },
+    attributes: SAFE_ATTRIBUTES,
+    order: [['lastName', 'ASC'], ['firstName', 'ASC']]
+  });
+  res.json({ success: true, data: { users, count: users.length } });
+});
 
 module.exports = {
-  getAllUsers,
-  getUserById,
-  createUser,
-  updateUser,
-  deleteUser,
-  getUsersByRole
+  getAllUsers, getContacts, getCustomerDirectory, getUserById, createUser, updateUser, deleteUser, getUsersByRole
 };

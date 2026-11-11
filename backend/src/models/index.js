@@ -14,12 +14,13 @@ const Invoice = require('./Invoice');
 const ServicePlan = require('./ServicePlan');
 const Appointment = require('./Appointment');
 const Inventory = require('./Inventory');
+const TimeOffRequest = require('./TimeOffRequest');
 
 // Define associations
 const initAssociations = () => {
   // User associations
   User.hasMany(TimeEntry, { foreignKey: 'userId', as: 'timeEntries' });
-  User.hasMany(PropertyNote, { foreignKey: 'customerId', as: 'propertyNotes' });
+  User.hasMany(PropertyNote, { foreignKey: 'customerId', as: 'propertyNoteEntries' });
   User.hasMany(PropertyNote, { foreignKey: 'authorId', as: 'authoredNotes' });
   User.hasMany(Message, { foreignKey: 'senderId', as: 'sentMessages' });
   User.hasMany(Message, { foreignKey: 'recipientId', as: 'receivedMessages' });
@@ -87,6 +88,11 @@ const initAssociations = () => {
   // ServicePlan associations
   ServicePlan.belongsTo(User, { foreignKey: 'customerId', as: 'customer' });
 
+  // TimeOffRequest associations
+  User.hasMany(TimeOffRequest, { foreignKey: 'userId', as: 'timeOffRequests' });
+  TimeOffRequest.belongsTo(User, { foreignKey: 'userId', as: 'employee' });
+  TimeOffRequest.belongsTo(User, { foreignKey: 'reviewedById', as: 'reviewedBy' });
+
   // Appointment associations
   Appointment.belongsTo(User, { foreignKey: 'customerId', as: 'customer' });
   Appointment.belongsTo(User, { foreignKey: 'assignedToId', as: 'assignedTo' });
@@ -124,5 +130,6 @@ module.exports = {
   ServicePlan,
   Appointment,
   Inventory,
+  TimeOffRequest,
   syncDatabase,
 };

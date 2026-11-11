@@ -1,5 +1,6 @@
 const { Truck, TruckAssignment, User } = require('../models');
 const { Op } = require('sequelize');
+const { localDate } = require('../utils/dates');
 
 /**
  * @route   GET /api/trucks
@@ -222,13 +223,13 @@ const assignEmployeesToTruck = async (req, res, next) => {
       });
     }
 
-    // Deactivate existing assignments for this truck on this date
+    // Replace this truck's crew for the date, and take these employees off any other truck that day.
     await TruckAssignment.update(
       { isActive: false },
       {
         where: {
-          truckId,
-          assignedDate: date || new Date().toISOString().split('T')[0]
+          assignedDate: date || localDate(),
+          [Op.or]: [{ truckId }, { employeeId: { [Op.in]: employeeIds } }]
         }
       }
     );
@@ -239,7 +240,7 @@ const assignEmployeesToTruck = async (req, res, next) => {
         TruckAssignment.create({
           truckId,
           employeeId,
-          assignedDate: date || new Date().toISOString().split('T')[0],
+          assignedDate: date || localDate(),
           role: roles ? roles[index] : 'crew',
           isActive: true
         })

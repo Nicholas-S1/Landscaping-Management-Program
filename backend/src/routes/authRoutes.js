@@ -22,10 +22,6 @@ const registerValidation = [
     .withMessage('Password must be at least 6 characters'),
   body('firstName').notEmpty().withMessage('First name is required'),
   body('lastName').notEmpty().withMessage('Last name is required'),
-  body('role')
-    .optional()
-    .isIn(['customer', 'employee'])
-    .withMessage('Invalid role for registration'),
   handleValidationErrors
 ];
 

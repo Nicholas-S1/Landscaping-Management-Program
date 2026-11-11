@@ -1,5 +1,8 @@
-const { Route, RouteCustomer, Truck, User, TruckAssignment } = require('../models');
+const { Route, RouteCustomer, Truck, User, TruckAssignment, Job } = require('../models');
 const { Op } = require('sequelize');
+const { localDate } = require('../utils/dates');
+
+const STOP_ORDER = [{ model: RouteCustomer, as: 'customers' }, 'orderIndex', 'ASC'];
 
 /**
  * @route   GET /api/routes
@@ -39,7 +42,8 @@ const getAllRoutes = async (req, res, next) => {
       ],
       limit: parseInt(limit),
       offset,
-      order: [['scheduledDate', 'DESC'], ['startTime', 'ASC']]
+      distinct: true,
+      order: [['scheduledDate', 'DESC'], ['startTime', 'ASC'], STOP_ORDER]
     });
 
     res.status(200).json({
@@ -97,10 +101,10 @@ const getRouteById = async (req, res, next) => {
               as: 'customer',
               attributes: ['id', 'firstName', 'lastName', 'propertyAddress', 'phone', 'propertyNotes']
             }
-          ],
-          order: [['orderIndex', 'ASC']]
+          ]
         }
-      ]
+      ],
+      order: [STOP_ORDER]
     });
 
     if (!route) {
@@ -229,6 +233,14 @@ const updateRoute = async (req, res, next) => {
       actualEndTime
     } = req.body;
 
+    // Moving a route (for example a weather delay) moves its unfinished jobs with it.
+    if (scheduledDate && scheduledDate !== route.scheduledDate) {
+      await Job.update(
+        { scheduledDate },
+        { where: { routeId: route.id, status: { [Op.in]: ['pending', 'in_progress'] } } }
+      );
+    }
+
     await route.update({
       name: name || route.name,
       description: description !== undefined ? description : route.description,
@@ -344,10 +356,18 @@ const updateRouteCustomerStatus = async (req, res, next) => {
       });
     }
 
+    // Arrival and departure are stamped automatically when a crew starts and finishes a stop.
+    const arrival = actualArrival !== undefined
+      ? actualArrival
+      : routeCustomer.actualArrival || (['in_progress', 'completed'].includes(status) ? new Date() : null);
+    const departure = actualDeparture !== undefined
+      ? actualDeparture
+      : routeCustomer.actualDeparture || (status === 'completed' ? new Date() : null);
+
     await routeCustomer.update({
       status: status || routeCustomer.status,
-      actualArrival: actualArrival !== undefined ? actualArrival : routeCustomer.actualArrival,
-      actualDeparture: actualDeparture !== undefined ? actualDeparture : routeCustomer.actualDeparture,
+      actualArrival: arrival,
+      actualDeparture: departure,
       servicesPerformed: servicesPerformed !== undefined ? servicesPerformed : routeCustomer.servicesPerformed,
       notes: notes !== undefined ? notes : routeCustomer.notes
     });
@@ -370,7 +390,7 @@ const updateRouteCustomerStatus = async (req, res, next) => {
 const getMyTodayRoute = async (req, res, next) => {
   try {
     const userId = req.user.id;
-    const today = new Date().toISOString().split('T')[0];
+    const today = localDate();
 
     // Find truck assignment for today
     const assignment = await TruckAssignment.findOne({
@@ -409,10 +429,10 @@ const getMyTodayRoute = async (req, res, next) => {
               as: 'customer',
               attributes: ['id', 'firstName', 'lastName', 'propertyAddress', 'phone', 'propertyNotes']
             }
-          ],
-          order: [['orderIndex', 'ASC']]
+          ]
         }
-      ]
+      ],
+      order: [STOP_ORDER]
     });
 
     res.status(200).json({
@@ -424,7 +444,49 @@ const getMyTodayRoute = async (req, res, next) => {
   }
 };
 
+/**
+ * @route   PUT /api/routes/:id/order
+ * @desc    Set the order stops are visited in
+ * @access  Private (Manager, Admin)
+ */
+const reorderRouteCustomers = async (req, res, next) => {
+  try {
+    const { customerIds } = req.body;
+    if (!Array.isArray(customerIds)) {
+      return res.status(400).json({ success: false, message: 'customerIds must be an array' });
+    }
+    await Promise.all(
+      customerIds.map((customerId, index) =>
+        RouteCustomer.update({ orderIndex: index }, { where: { routeId: req.params.id, customerId } })
+      )
+    );
+    res.status(200).json({ success: true, message: 'Stop order updated' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * @route   DELETE /api/routes/:routeId/customers/:customerId
+ * @desc    Remove a stop from a route
+ * @access  Private (Manager, Admin)
+ */
+const removeCustomerFromRoute = async (req, res, next) => {
+  try {
+    const { routeId, customerId } = req.params;
+    const removed = await RouteCustomer.destroy({ where: { routeId, customerId } });
+    if (!removed) {
+      return res.status(404).json({ success: false, message: 'Customer not found on this route' });
+    }
+    res.status(200).json({ success: true, message: 'Stop removed' });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
+  reorderRouteCustomers,
+  removeCustomerFromRoute,
   getAllRoutes,
   getRouteById,
   createRoute,

@@ -8,7 +8,7 @@ const { generateTokens, verifyRefreshToken } = require('../utils/jwt');
  */
 const register = async (req, res, next) => {
   try {
-    const { email, password, firstName, lastName, phone, address, role, propertyAddress } = req.body;
+    const { email, password, firstName, lastName, phone, address, propertyAddress } = req.body;
 
     // Check if user already exists
     const existingUser = await User.findOne({ where: { email } });
@@ -19,9 +19,8 @@ const register = async (req, res, next) => {
       });
     }
 
-    // Validate role - only admins can create manager/admin accounts
-    const allowedRoles = ['customer', 'employee'];
-    const userRole = allowedRoles.includes(role) ? role : 'customer';
+    // Public sign-up only ever creates customers; staff accounts are created by the owner.
+    const userRole = 'customer';
 
     // Create user
     const user = await User.create({
@@ -32,7 +31,7 @@ const register = async (req, res, next) => {
       phone,
       address,
       role: userRole,
-      propertyAddress: userRole === 'customer' ? propertyAddress : null
+      propertyAddress
     });
 
     // Generate tokens

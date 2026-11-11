@@ -89,11 +89,11 @@ const Invoice = sequelize.define('Invoice', {
 }, {
   tableName: 'invoices',
   indexes: [
-    { fields: ['customerId'] },
+    { fields: ['customer_id'] },
     { fields: ['status'] },
-    { fields: ['invoiceDate'] },
-    { fields: ['dueDate'] },
-    { fields: ['invoiceNumber'] }
+    { fields: ['invoice_date'] },
+    { fields: ['due_date'] },
+    { fields: ['invoice_number'] }
   ]
 });
 

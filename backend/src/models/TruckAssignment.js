@@ -38,10 +38,10 @@ const TruckAssignment = sequelize.define('TruckAssignment', {
 }, {
   tableName: 'truck_assignments',
   indexes: [
-    { fields: ['truckId'] },
-    { fields: ['employeeId'] },
-    { fields: ['assignedDate'] },
-    { fields: ['isActive'] }
+    { fields: ['truck_id'] },
+    { fields: ['employee_id'] },
+    { fields: ['assigned_date'] },
+    { fields: ['is_active'] }
   ]
 });
 

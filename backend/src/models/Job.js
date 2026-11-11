@@ -97,6 +97,11 @@ const Job = sequelize.define('Job', {
     allowNull: true,
     comment: 'Array of materials/supplies used'
   },
+  checklist: {
+    type: DataTypes.JSON,
+    allowNull: true,
+    comment: 'Quality checklist: array of { label, done }'
+  },
   estimatedCost: {
     type: DataTypes.DECIMAL(10, 2),
     allowNull: true
@@ -128,11 +133,11 @@ const Job = sequelize.define('Job', {
 }, {
   tableName: 'jobs',
   indexes: [
-    { fields: ['customerId'] },
+    { fields: ['customer_id'] },
     { fields: ['status'] },
-    { fields: ['scheduledDate'] },
-    { fields: ['assignedToId'] },
-    { fields: ['routeId'] }
+    { fields: ['scheduled_date'] },
+    { fields: ['assigned_to_id'] },
+    { fields: ['route_id'] }
   ]
 });
 

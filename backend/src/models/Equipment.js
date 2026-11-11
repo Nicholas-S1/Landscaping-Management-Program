@@ -80,7 +80,7 @@ const Equipment = sequelize.define('Equipment', {
   indexes: [
     { fields: ['status'] },
     { fields: ['category'] },
-    { fields: ['assignedToId'] }
+    { fields: ['assigned_to_id'] }
   ]
 });
 

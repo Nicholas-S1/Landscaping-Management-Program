@@ -69,9 +69,9 @@ const TimeEntry = sequelize.define('TimeEntry', {
 }, {
   tableName: 'time_entries',
   indexes: [
-    { fields: ['userId'] },
-    { fields: ['clockIn'] },
-    { fields: ['routeId'] }
+    { fields: ['user_id'] },
+    { fields: ['clock_in'] },
+    { fields: ['route_id'] }
   ],
   hooks: {
     beforeSave: (timeEntry) => {

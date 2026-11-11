@@ -65,7 +65,7 @@ const Truck = sequelize.define('Truck', {
   tableName: 'trucks',
   indexes: [
     { fields: ['status'] },
-    { fields: ['licensePlate'] }
+    { fields: ['license_plate'] }
   ]
 });
 
