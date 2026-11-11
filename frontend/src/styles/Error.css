@@ -3,7 +3,7 @@
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #2d7a50 0%, #173d2a 100%);
   padding: 20px;
 }
 
@@ -19,7 +19,7 @@
 .error-content h1 {
   font-size: 96px;
   font-weight: 700;
-  color: #667eea;
+  color: #2d7a50;
   margin-bottom: 20px;
 }
 

@@ -41,7 +41,6 @@ export interface RegisterData {
   lastName: string;
   phone?: string;
   address?: string;
-  role?: 'customer' | 'employee';
   propertyAddress?: string;
 }
 

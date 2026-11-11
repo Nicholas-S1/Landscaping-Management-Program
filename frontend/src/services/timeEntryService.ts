@@ -37,4 +37,6 @@ class TimeEntryService {
   }
 }
 
-export default new TimeEntryService();
+const timeEntryService = new TimeEntryService();
+
+export default timeEntryService;

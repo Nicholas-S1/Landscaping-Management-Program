@@ -11,7 +11,6 @@ const Register: React.FC = () => {
     firstName: '',
     lastName: '',
     phone: '',
-    role: 'customer' as 'customer' | 'employee',
     propertyAddress: '',
   });
   const [error, setError] = useState('');
@@ -61,7 +60,7 @@ const Register: React.FC = () => {
       <div className="auth-card">
         <div className="auth-header">
           <h1>Landscaping Management</h1>
-          <h2>Create Account</h2>
+          <h2>Create Customer Account</h2>
         </div>
 
         {error && <div className="error-message">{error}</div>}
@@ -120,21 +119,6 @@ const Register: React.FC = () => {
             />
           </div>
 
-          <div className="form-group">
-            <label htmlFor="role">Account Type</label>
-            <select
-              id="role"
-              name="role"
-              value={formData.role}
-              onChange={handleChange}
-              required
-            >
-              <option value="customer">Customer</option>
-              <option value="employee">Employee</option>
-            </select>
-          </div>
-
-          {formData.role === 'customer' && (
             <div className="form-group">
               <label htmlFor="propertyAddress">Property Address</label>
               <input
@@ -146,7 +130,6 @@ const Register: React.FC = () => {
                 placeholder="123 Main St, City, State ZIP"
               />
             </div>
-          )}
 
           <div className="form-row">
             <div className="form-group">

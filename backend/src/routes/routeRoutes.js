@@ -34,8 +34,8 @@ router.post('/', authorize('manager', 'admin'), createRoute);
 // Update route (manager, admin only)
 router.put('/:id', authorize('manager', 'admin'), updateRoute);
 
-// Delete route (admin only)
-router.delete('/:id', authorize('admin'), deleteRoute);
+// Delete route (manager, admin only)
+router.delete('/:id', authorize('manager', 'admin'), deleteRoute);
 
 // Add customers to route (manager, admin only)
 router.post('/:id/customers', authorize('manager', 'admin'), addCustomersToRoute);

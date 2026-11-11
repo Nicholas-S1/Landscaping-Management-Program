@@ -1,401 +1,127 @@
 # Landscaping Management System
 
-A comprehensive web and mobile application for managing landscaping businesses with multi-level authentication, route optimization, job tracking, billing, and more.
+Web app for running a landscaping business: customers, crews, routes, jobs, billing and reporting, with four
+sign-in levels (customer, employee, manager, owner/admin).
 
-## Features Overview
+- **Backend:** Node.js, Express, PostgreSQL (Sequelize), JWT auth — `backend/`
+- **Frontend:** React 18 + TypeScript — `frontend/`
 
-### Phase 1: Foundation & Authentication ✅ COMPLETE
-- **4-Level Authentication System**
-  - Customer
-  - Employee
-  - Manager/Owner
-  - Admin
-- **JWT-based Authentication** with role-based access control (RBAC)
-- **User Management** with secure password hashing
-- **Role-specific Dashboards** for each user type
-- **PostgreSQL Database** with Sequelize ORM
-- **React + TypeScript Frontend**
+## Getting started
 
-### Upcoming Phases
-
-#### Phase 2: Core Employee Features
-- Clock in/out system
-- Truck assignment viewing
-- Route viewing with map integration
-- Customer property notes and messaging
-
-#### Phase 3: Manager/Owner Features
-- Employee CRUD operations
-- Timecard adjustments
-- Truck-to-route assignments
-- Equipment management
-- Financial dashboard
-
-#### Phase 4: Customer Portal
-- Bill viewing and payment
-- Photo uploads
-- Property notes
-- Service history
-
-#### Phase 5+: Advanced Features
-- Job/Service tracking
-- Scheduling & calendar
-- Invoicing & billing automation
-- GPS tracking
-- Reporting & analytics
-- Inventory management
-- And much more...
-
-## Tech Stack
-
-### Backend
-- **Node.js** with Express
-- **PostgreSQL** database
-- **Sequelize** ORM
-- **JWT** authentication
-- **bcryptjs** for password hashing
-- **Docker** for PostgreSQL containerization
-
-### Frontend
-- **React 18**
-- **TypeScript**
-- **React Router** for navigation
-- **Axios** for API calls
-- **Context API** for state management
-
-## Prerequisites
-
-Before you begin, ensure you have the following installed:
-- **Node.js** (v16 or higher)
-- **npm** or **yarn**
-- **Docker** and **Docker Compose** (for PostgreSQL)
-- **Git**
-
-## Installation & Setup
-
-### 1. Clone the Repository
+You need Node.js 18+ and Docker (or your own PostgreSQL 13+).
 
 ```bash
-git clone <repository-url>
-cd Landscaping-Management-Program
-```
-
-### 2. Set Up PostgreSQL Database
-
-Start the PostgreSQL database using Docker:
-
-```bash
+# 1. Database
 docker-compose up -d
-```
 
-This will start a PostgreSQL container on port 5432.
-
-To stop the database:
-```bash
-docker-compose down
-```
-
-To stop and remove all data:
-```bash
-docker-compose down -v
-```
-
-### 3. Set Up Backend
-
-```bash
+# 2. API (http://localhost:5000)
 cd backend
-
-# Install dependencies
+cp .env.example .env        # then set JWT_SECRET, JWT_REFRESH_SECRET and TZ (your time zone)
 npm install
-
-# The .env file is already configured for local development
-# Edit backend/.env if you need to change database credentials
-
-# Start the development server
+npm run seed                # starter accounts + sample data
 npm run dev
-```
 
-The backend server will start on `http://localhost:5000`
-
-### 4. Set Up Frontend
-
-Open a new terminal:
-
-```bash
+# 3. Web app (http://localhost:3000), in a second terminal
 cd frontend
-
-# Install dependencies
 npm install
-
-# Start the development server
 npm start
 ```
 
-The frontend will start on `http://localhost:3000` and automatically open in your browser.
+`npm run seed` creates one account per role and prints the password (default `ChangeMe123!`, or set
+`SEED_PASSWORD`). Change the passwords before real use.
 
-## Default Configuration
+| Role | Email |
+|------|-------|
+| Owner / admin | owner@example.com |
+| Manager | manager@example.com |
+| Employee | employee@example.com |
+| Customer | customer@example.com |
 
-### Database
-- **Host**: localhost
-- **Port**: 5432
-- **Database**: landscaping_db
-- **Username**: postgres
-- **Password**: postgres
+New customers can sign themselves up on the sign-in page. Employee, manager and admin accounts are created by
+the owner under **People → Hire team member**.
 
-### API
-- **Backend URL**: http://localhost:5000
-- **Frontend URL**: http://localhost:3000
+## What each role can do
 
-## User Roles
+**Customer**
+- See bills, line items, balance due and payment status
+- Leave notes and photos on their property (visible to crews and managers); keep standing instructions (gate codes, pets)
+- Request extra services, see upcoming visits and service history with before/after photos
+- Book, reschedule and cancel appointments; see their service plan
+- Message the office
 
-The system supports 4 user roles with different access levels:
+**Employee**
+- Clock in and out; see their own timesheet
+- See today's truck, route and stops in order, with a one-tap Google Maps link for the whole route
+- Mark stops arrived/finished/skipped (times are stamped automatically)
+- Work jobs: quality checklist, before/after photos, materials used, start/complete
+- Leave property notes and photos, including staff-only notes
+- See the weekly schedule, request time off, log maintenance on equipment assigned to them, message the team
 
-### 1. Customer
-- View bills
-- Upload property photos
-- Leave property notes
-- View service history
+**Manager** — everything an employee can do, plus
+- Adjust timecards (with a recorded reason); approve or deny time off
+- Trucks: add/edit, assign each day's crew and driver
+- Routes: create, assign a truck, add customers, set the stop order; moving a route's date moves its unfinished jobs
+- Jobs/work orders: create, assign, price, checklist; schedule customer requests
+- Edit employee details (name, address, phone, hourly rate); add and edit customers
+- Equipment and maintenance history; inventory with low-stock flags
+- Invoices: create, send, record payments, send reminders; service plans; appointments
+- Reports: employee hours and jobs completed, route completion
 
-### 2. Employee
-- Clock in/out
-- View truck assignments
-- View daily routes
-- Leave customer property notes
-- View messages
+**Owner / admin** — everything a manager can do, plus
+- Hire, deactivate/reactivate, and change roles (including assigning the manager role)
+- Finances: collected, invoiced, outstanding, overdue, labor/materials/maintenance costs, payments by month
+- Send an announcement to all staff
 
-### 3. Manager
-- All employee capabilities
-- Manage employees (CRUD)
-- Adjust time clocks
-- Assign trucks to routes
-- Manage equipment
-- View customer property notes
+## Automation
 
-### 4. Admin
-- All manager capabilities
-- Assign manager roles
-- View all finances
-- Hire/fire employees
-- Send bulk SMS/emails to employees
-- System-wide settings
+- Completing a job with a price creates and sends its invoice; materials used are deducted from inventory.
+- Every night (and at startup) the server marks past-due invoices overdue, bills active service plans on
+  their cycle, and creates the coming week's jobs for recurring plans.
 
-## API Endpoints
+## Not built yet
 
-### Authentication
-- `POST /api/auth/register` - Register new user
-- `POST /api/auth/login` - Login user
-- `POST /api/auth/refresh` - Refresh access token
-- `GET /api/auth/me` - Get current user
-- `PUT /api/auth/update-profile` - Update user profile
-- `PUT /api/auth/change-password` - Change password
+- **Online card payments.** Customers see their bills; staff record payments (cash, check, card, transfer).
+  Needs a Stripe (or similar) account.
+- **Text messages.** Announcements are delivered in-app. Sending them by SMS as well is coded but has never
+  been run against a live Twilio account; add the `TWILIO_*` values in `backend/.env` to try it.
+- **Automatic route optimization.** Stop order is set by hand and previewed in Google Maps.
+- **Live GPS tracking and arrival estimates, push/email notifications, referral program, training and
+  certification tracking.**
+- **Mobile apps** for the App Store and Google Play. The web app is responsive and works on phones.
+- **Production hardening:** database migrations (tables are currently created from the models at startup),
+  password reset by email, and deployment/HTTPS setup.
 
-### Users (Manager/Admin only)
-- `GET /api/users` - Get all users (with pagination)
-- `GET /api/users/:id` - Get user by ID
-- `POST /api/users` - Create new user
-- `PUT /api/users/:id` - Update user
-- `DELETE /api/users/:id` - Deactivate user
-- `GET /api/users/role/:role` - Get users by role
-
-## Testing the Application
-
-### 1. Register a New Account
-
-1. Open http://localhost:3000
-2. Click "Sign up"
-3. Fill in the registration form
-4. Choose account type (Customer or Employee)
-5. Click "Create Account"
-
-### 2. Test Different User Roles
-
-To create manager or admin accounts, you'll need to:
-
-1. Register as a customer/employee first
-2. Manually update the user role in the database:
-
-```sql
--- Connect to PostgreSQL
-docker exec -it landscaping_postgres psql -U postgres -d landscaping_db
-
--- Update user role
-UPDATE users SET role = 'admin' WHERE email = 'your-email@example.com';
-
--- Exit
-\q
-```
-
-### 3. Test Authentication
-
-- Login with different user roles
-- Each role will see a different dashboard
-- Try accessing protected routes
-- Test logout functionality
-
-## Project Structure
-
-```
-Landscaping-Management-Program/
-├── backend/
-│   ├── src/
-│   │   ├── config/          # Database configuration
-│   │   ├── controllers/     # Route controllers
-│   │   ├── middleware/      # Auth, validation, error handling
-│   │   ├── models/          # Database models
-│   │   ├── routes/          # API routes
-│   │   ├── services/        # Business logic
-│   │   ├── utils/           # Utility functions
-│   │   └── server.js        # Main server file
-│   ├── .env                 # Environment variables
-│   └── package.json
-├── frontend/
-│   ├── public/
-│   ├── src/
-│   │   ├── components/      # Reusable components
-│   │   ├── context/         # React context (Auth)
-│   │   ├── pages/           # Page components
-│   │   ├── services/        # API services
-│   │   ├── styles/          # CSS files
-│   │   ├── types/           # TypeScript types
-│   │   ├── App.tsx          # Main app component
-│   │   └── index.tsx        # Entry point
-│   ├── .env                 # Environment variables
-│   └── package.json
-├── docker-compose.yml       # PostgreSQL container
-└── README.md
-```
-
-## Environment Variables
-
-### Backend (.env)
-
-```env
-# Server
-PORT=5000
-NODE_ENV=development
-
-# Database
-DB_HOST=localhost
-DB_PORT=5432
-DB_NAME=landscaping_db
-DB_USER=postgres
-DB_PASSWORD=postgres
-
-# JWT
-JWT_SECRET=your_secret_key
-JWT_EXPIRE=7d
-
-# CORS
-CORS_ORIGIN=http://localhost:3000
-```
-
-### Frontend (.env)
-
-```env
-REACT_APP_API_URL=http://localhost:5000/api
-```
-
-## Future Integrations
-
-The system is designed to support these third-party services (configuration already in place):
-
-- **Google Maps API** - Route optimization and mapping
-- **Stripe** - Payment processing
-- **Twilio** - SMS notifications
-- **AWS S3** - Image storage
-- **Nodemailer** - Email notifications
-
-Add your API keys to `backend/.env` when ready to integrate these services.
-
-## Development Tips
-
-### Backend Development
+## Checks
 
 ```bash
-# Install dependencies
-npm install
-
-# Run in development mode (auto-restart)
-npm run dev
-
-# Run in production mode
-npm start
-
-# Initialize database
-npm run init-db
+cd backend && npm run test:api     # needs the API running against a seeded development database
+cd frontend && CI=true npm run build
 ```
 
-### Frontend Development
+`npm run test:api` exercises every endpoint and the permission rules for each role. It creates records, so
+do not point it at real data.
 
-```bash
-# Install dependencies
-npm install
+## Project layout
 
-# Run development server
-npm start
-
-# Build for production
-npm run build
-
-# Run tests
-npm test
+```
+backend/src/
+  config/        database connection, seed script
+  controllers/   request handlers
+  jobs/          nightly scheduler
+  middleware/    auth, validation, error handling
+  models/        Sequelize models and associations
+  routes/        API routes
+  services/      invoicing, plan billing, SMS
+frontend/src/
+  components/    layout, shared UI, generic list/edit page
+  pages/         screens, grouped by area
+  services/      API client
 ```
 
-## Troubleshooting
+## Configuration
 
-### Database Connection Issues
+`backend/.env` (copied from `.env.example`): database connection, JWT secrets, `CORS_ORIGIN` (the web app's
+URL), `TZ` (time zone used for "today"), upload size/location, and optional Twilio keys.
+`frontend/.env`: `REACT_APP_API_URL` (defaults to `http://localhost:5000/api`).
 
-1. Ensure Docker is running
-2. Check if PostgreSQL container is running:
-   ```bash
-   docker ps
-   ```
-3. Restart the container:
-   ```bash
-   docker-compose restart
-   ```
-
-### Port Already in Use
-
-If port 5000 or 3000 is already in use:
-
-1. Change the port in `backend/.env` (PORT=5001)
-2. Update `frontend/.env` to match
-3. Restart both servers
-
-### Frontend Can't Connect to Backend
-
-1. Ensure backend is running on http://localhost:5000
-2. Check `frontend/.env` has correct API URL
-3. Clear browser cache and restart frontend
-
-## Contributing
-
-This is Phase 1 of the project. Future phases will add:
-- Job tracking
-- Scheduling
-- Invoicing
-- GPS tracking
-- Mobile apps
-- And much more!
-
-## License
-
-MIT
-
-## Support
-
-For issues or questions, please create an issue in the repository.
-
----
-
-**Current Status**: Phase 1 Complete ✅
-- ✅ Backend API with authentication
-- ✅ Frontend with React + TypeScript
-- ✅ 4-level role-based access control
-- ✅ User management
-- ✅ Role-specific dashboards
-- ✅ PostgreSQL database setup
-- ✅ Docker configuration
-
-**Next Steps**: Begin Phase 2 - Core Employee Features
+Uploaded photos are stored on the API server's disk under `backend/uploads/`.

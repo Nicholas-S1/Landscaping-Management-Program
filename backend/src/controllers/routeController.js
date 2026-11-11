@@ -11,11 +11,16 @@ const STOP_ORDER = [{ model: RouteCustomer, as: 'customers' }, 'orderIndex', 'AS
  */
 const getAllRoutes = async (req, res, next) => {
   try {
-    const { status, date, truckId, page = 1, limit = 20 } = req.query;
+    const { status, date, from, to, truckId, page = 1, limit = 20 } = req.query;
 
     const where = {};
     if (status) where.status = status;
     if (date) where.scheduledDate = date;
+    if (from || to) {
+      where.scheduledDate = {};
+      if (from) where.scheduledDate[Op.gte] = from;
+      if (to) where.scheduledDate[Op.lte] = to;
+    }
     if (truckId) where.truckId = truckId;
 
     const offset = (parseInt(page) - 1) * parseInt(limit);
@@ -211,6 +216,11 @@ const createRoute = async (req, res, next) => {
  */
 const updateRoute = async (req, res, next) => {
   try {
+    // Blank form fields mean "no value".
+    for (const key of Object.keys(req.body)) {
+      if (req.body[key] === '') req.body[key] = null;
+    }
+
     const route = await Route.findByPk(req.params.id);
 
     if (!route) {
@@ -398,13 +408,14 @@ const getMyTodayRoute = async (req, res, next) => {
         employeeId: userId,
         assignedDate: today,
         isActive: true
-      }
+      },
+      include: [{ model: Truck, as: 'truck' }]
     });
 
     if (!assignment) {
       return res.status(200).json({
         success: true,
-        data: { route: null },
+        data: { route: null, truck: null },
         message: 'No truck assignment for today'
       });
     }
@@ -437,7 +448,7 @@ const getMyTodayRoute = async (req, res, next) => {
 
     res.status(200).json({
       success: true,
-      data: { route }
+      data: { route, truck: assignment.truck, truckRole: assignment.role }
     });
   } catch (error) {
     next(error);

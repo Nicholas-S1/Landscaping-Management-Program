@@ -88,6 +88,11 @@ const getTruckById = async (req, res, next) => {
  */
 const createTruck = async (req, res, next) => {
   try {
+    // Blank form fields mean "no value".
+    for (const key of Object.keys(req.body)) {
+      if (req.body[key] === '') req.body[key] = null;
+    }
+
     const {
       name,
       licensePlate,
@@ -129,6 +134,11 @@ const createTruck = async (req, res, next) => {
  */
 const updateTruck = async (req, res, next) => {
   try {
+    // Blank form fields mean "no value".
+    for (const key of Object.keys(req.body)) {
+      if (req.body[key] === '') req.body[key] = null;
+    }
+
     const truck = await Truck.findByPk(req.params.id);
 
     if (!truck) {
@@ -156,15 +166,15 @@ const updateTruck = async (req, res, next) => {
     await truck.update({
       name: name || truck.name,
       licensePlate: licensePlate !== undefined ? licensePlate : truck.licensePlate,
-      make: make || truck.make,
-      model: model || truck.model,
-      year: year || truck.year,
-      vin: vin || truck.vin,
-      capacity: capacity || truck.capacity,
+      make: make !== undefined ? make : truck.make,
+      model: model !== undefined ? model : truck.model,
+      year: year !== undefined ? year : truck.year,
+      vin: vin !== undefined ? vin : truck.vin,
+      capacity: capacity !== undefined ? capacity : truck.capacity,
       status: status || truck.status,
       currentMileage: currentMileage !== undefined ? currentMileage : truck.currentMileage,
-      lastMaintenanceDate: lastMaintenanceDate || truck.lastMaintenanceDate,
-      nextMaintenanceDate: nextMaintenanceDate || truck.nextMaintenanceDate,
+      lastMaintenanceDate: lastMaintenanceDate !== undefined ? lastMaintenanceDate : truck.lastMaintenanceDate,
+      nextMaintenanceDate: nextMaintenanceDate !== undefined ? nextMaintenanceDate : truck.nextMaintenanceDate,
       notes: notes !== undefined ? notes : truck.notes
     });
 

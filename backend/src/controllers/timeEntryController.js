@@ -122,15 +122,13 @@ const getCurrentTimeEntry = async (req, res, next) => {
  */
 const getTimeEntries = async (req, res, next) => {
   try {
-    const { userId, startDate, endDate, page = 1, limit = 20 } = req.query;
+    const { userId, all, startDate, endDate, page = 1, limit = 20 } = req.query;
 
     // Only allow users to see their own entries unless they're manager/admin
-    let targetUserId = req.user.id;
-    if (['manager', 'admin'].includes(req.user.role) && userId) {
-      targetUserId = userId;
-    }
-
-    const where = { userId: targetUserId };
+    const isManager = ['manager', 'admin'].includes(req.user.role);
+    const where = {};
+    if (isManager && userId) where.userId = userId;
+    else if (!(isManager && all === 'true')) where.userId = req.user.id;
 
     if (startDate && endDate) {
       where.clockIn = {
